@@ -5,6 +5,7 @@ import os
 import random
 import re
 import shlex
+import sys
 from typing import Any
 from typing import ContextManager
 from typing import Generator
@@ -184,8 +185,19 @@ def basic_run_hook(
         require_serial: bool,
         color: bool,
 ) -> tuple[int, bytes]:
+    # Super hacky way for a platform-independent way to execute python from
+    # a local virtual environment. If the command starts with '.[<path_to_venv>]',
+    # you'll execute your local python.
+    cmd = hook_cmd(entry, args)
+    if cmd[0].startswith('.[') and cmd[0].endswith(']'):
+        venv = cmd[0][2:-1]
+        if sys.platform == 'win32':
+            python = f'{venv}/Scripts/python.exe'
+        else:
+            python = f'{venv}/bin/python'
+        cmd = (python, *cmd[1:])
     return run_xargs(
-        hook_cmd(entry, args),
+        cmd,
         file_args,
         require_serial=require_serial,
         color=color,
